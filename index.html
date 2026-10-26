@@ -1,0 +1,285 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EXPENSE CLAIM</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">⚡ <span>EXPENSE CLAIM</span></div>
+
+    <nav>
+      <button class="nav active" data-page="dashboard">▦ Dashboard</button>
+      <button class="nav" data-page="create">＋ Create New</button>
+      <button class="nav" data-page="invoices">▤ Saved Claims</button>
+      <button class="nav" data-page="manage">☷ Manage Dropdowns</button>
+    </nav>
+
+    <div class="side-note">Professional Expense Management</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">EXPENSE MANAGEMENT WORKSPACE</p>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
+      <button class="primary" id="headerCreate">＋ Create New</button>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="page show" id="dashboardPage">
+      <div class="stats">
+        <article class="stat-card">
+          <span>Total Claims</span>
+          <strong id="statInvoices">0</strong>
+        </article>
+        <article class="stat-card">
+          <span>Total Items</span>
+          <strong id="statItems">0</strong>
+        </article>
+        <article class="stat-card">
+          <span>Total Amount</span>
+          <strong id="statAmount">SAR 0.00</strong>
+        </article>
+        <article class="stat-card">
+          <span>Cost Centers</span>
+          <strong id="statCenters">0</strong>
+        </article>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Recent Expense Claims</h2>
+            <p>Recently saved claims</p>
+          </div>
+          <button class="light" data-goto="invoices">View All</button>
+        </div>
+        <div id="recentTable"></div>
+      </div>
+    </section>
+
+    <!-- CREATE CLAIM -->
+    <section class="page" id="createPage">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 id="formTitle">Create Expense Claim</h2>
+            <p>Enter claim details once and add multiple items.</p>
+          </div>
+          <button class="light" id="clearForm" type="button">Clear Form</button>
+        </div>
+
+        <form id="invoiceForm">
+          <input type="hidden" id="editId">
+
+          <div class="section-label">
+            <span>01</span>
+            <div>
+              <strong>Claim Details</strong>
+              <small>These details apply to all items in this claim.</small>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Claim Name / Number *
+              <input id="claimName" required placeholder="Enter claim name or number">
+            </label>
+
+            <label>
+              Claim Date *
+              <input id="claimDate" type="date" required>
+            </label>
+
+            <label>
+              Cost Center *
+              <input id="costCenter" list="costCenterOptions"
+                     required placeholder="Select or type cost center">
+              <datalist id="costCenterOptions"></datalist>
+            </label>
+
+            <label>
+              Currency
+              <select id="currency">
+                <option value="SAR">SAR — Saudi Riyal</option>
+                <option value="USD">USD — US Dollar</option>
+                <option value="EUR">EUR — Euro</option>
+                <option value="AED">AED — UAE Dirham</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="section-label item-section-label">
+            <span>02</span>
+            <div>
+              <strong>Add Expense Item</strong>
+              <small>Each item has its own invoice number and date.</small>
+            </div>
+          </div>
+
+          <div class="item-entry-card">
+            <div class="form-grid item-form-grid">
+              <label>
+                Invoice Number *
+                <input id="itemInvoiceNumber" required
+                       placeholder="Enter invoice number">
+              </label>
+
+              <label>
+                Invoice Date *
+                <input id="itemInvoiceDate" type="date" required>
+              </label>
+
+              <label class="wide-field">
+                Item Description *
+                <input id="itemDescription" list="descriptionSuggestions"
+                       required placeholder="Select or type description">
+                <datalist id="descriptionSuggestions"></datalist>
+              </label>
+
+              <label class="wide-field">
+                Purpose of Item *
+                <input id="itemPurpose" list="purposeSuggestions"
+                       required placeholder="Select or type purpose">
+                <datalist id="purposeSuggestions"></datalist>
+              </label>
+
+              <label>
+                Amount *
+                <input id="itemAmount" type="number" min="0.01"
+                       step="0.01" required placeholder="0.00">
+              </label>
+
+              <label>
+                Category *
+                <input id="itemCategory" list="categoryOptions"
+                       required placeholder="Select or type category">
+                <datalist id="categoryOptions"></datalist>
+              </label>
+            </div>
+
+            <div class="item-entry-actions">
+              <span class="muted-note">Add each item separately.</span>
+              <button type="button" class="primary" id="addItem">
+                ＋ Add Item
+              </button>
+            </div>
+          </div>
+
+          <div class="items-head">
+            <div>
+              <h3>Items in This Claim <span class="count-pill" id="itemCount">0</span></h3>
+              <p>Items are displayed in the order added.</p>
+            </div>
+          </div>
+
+          <div id="itemCards" class="item-cards">
+            <div class="empty">No items added yet.</div>
+          </div>
+
+          <div class="total-line">
+            Claim Total
+            <strong id="formTotal">SAR 0.00</strong>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="light" id="cancelForm">Cancel / Back</button>
+            <button type="submit" class="primary" id="saveClaim">Save Claim</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- SAVED CLAIMS -->
+    <section class="page" id="invoicesPage">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Saved Expense Claims</h2>
+            <p>View, edit, delete and export claims.</p>
+          </div>
+          <button class="primary" id="newFromList">＋ Create New</button>
+        </div>
+
+        <div class="toolbar">
+          <input id="invoiceSearch"
+                 placeholder="Search claim, invoice number or cost center">
+          <button class="light" id="exportExcel">Export to Excel</button>
+        </div>
+
+        <div id="invoiceTable"></div>
+      </div>
+    </section>
+
+    <!-- MANAGE DROPDOWNS -->
+    <section class="page" id="managePage">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Manage Dropdowns</h2>
+            <p>Add your own options for future entries.</p>
+          </div>
+        </div>
+        <div class="manage-grid" id="manageCards"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- CLAIM DETAILS MODAL -->
+<div id="modal" class="modal" aria-hidden="true">
+  <div class="modal-box">
+    <div class="panel-head">
+      <h2>Claim Details</h2>
+      <button class="light" id="closeModal" type="button">✕ Close</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- EXPORT SELECTION MODAL -->
+<div id="exportModal" class="modal" aria-hidden="true">
+  <div class="modal-box">
+    <div class="panel-head">
+      <h2>Export Claims to Excel</h2>
+      <button class="light" id="closeExportModal" type="button">✕ Close</button>
+    </div>
+
+    <div class="export-fields">
+      <label>
+        Select Cost Center
+        <select id="exportCostCenter">
+          <option value="">Select Cost Center</option>
+        </select>
+      </label>
+
+      <label>
+        Select Claim
+        <select id="exportClaim">
+          <option value="">Select Claim</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="exportInfo">Select a cost center and claim to export all items.</p>
+
+    <div class="form-actions">
+      <button type="button" class="light" id="cancelExport">Cancel</button>
+      <button type="button" class="primary" id="confirmExport">Export Excel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
