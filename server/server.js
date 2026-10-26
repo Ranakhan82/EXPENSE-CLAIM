@@ -5,12 +5,18 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ObjectId } = require("mongodb");
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+const fs = require("fs");
+
+require("dotenv").config({
+  path: path.join(__dirname, ".env")
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || "EXPENSE_CLAIM";
+
+const FRONTEND_DIR = path.resolve(__dirname, "..");
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -18,26 +24,29 @@ app.use(express.json({ limit: "10mb" }));
 let claimsCollection;
 let dropdownsCollection;
 
-function cleanId(id) {
-  return typeof id === "string" ? id.trim() : "";
+function databaseReady(res) {
+  if (!claimsCollection || !dropdownsCollection) {
+    res.status(503).json({
+      success: false,
+      message: "Database is not ready. Please try again."
+    });
+    return false;
+  }
+  return true;
 }
 
-function serializeClaim(doc) {
+function serializeDocument(document) {
+  if (!document) return null;
+
+  const { _id, ...data } = document;
+
   return {
-    ...doc,
-    id: doc._id ? doc._id.toString() : doc.id,
-    _id: undefined
+    ...data,
+    id: _id ? _id.toString() : data.id
   };
 }
 
-function serializeDropdown(doc) {
-  return {
-    ...doc,
-    id: doc._id ? doc._id.toString() : doc.id,
-    _id: undefined
-  };
-}
-
+// Health check
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
@@ -45,8 +54,10 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Load all claims
+// Load claims
 app.get("/api/claims", async (req, res) => {
+  if (!databaseReady(res)) return;
+
   try {
     const documents = await claimsCollection
       .find({})
@@ -55,10 +66,10 @@ app.get("/api/claims", async (req, res) => {
 
     res.json({
       success: true,
-      claims: documents.map(serializeClaim)
+      claims: documents.map(serializeDocument)
     });
   } catch (error) {
-    console.error("Load claims error:", error);
+    console.error("Load claims error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to load claims."
@@ -66,8 +77,10 @@ app.get("/api/claims", async (req, res) => {
   }
 });
 
-// Save a new claim
+// Save new claim
 app.post("/api/claims", async (req, res) => {
+  if (!databaseReady(res)) return;
+
   try {
     const claim = req.body;
 
@@ -95,10 +108,10 @@ app.post("/api/claims", async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Claim saved successfully.",
-      claim: serializeClaim(saved)
+      claim: serializeDocument(saved)
     });
   } catch (error) {
-    console.error("Save claim error:", error);
+    console.error("Save claim error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to save claim."
@@ -106,10 +119,12 @@ app.post("/api/claims", async (req, res) => {
   }
 });
 
-// Update an existing claim
+// Update claim
 app.put("/api/claims/:id", async (req, res) => {
+  if (!databaseReady(res)) return;
+
   try {
-    const id = cleanId(req.params.id);
+    const id = String(req.params.id || "").trim();
     const claim = req.body;
 
     if (!ObjectId.isValid(id)) {
@@ -127,9 +142,10 @@ app.put("/api/claims/:id", async (req, res) => {
     }
 
     const { id: bodyId, _id, createdAt, ...claimData } = claim;
+    const objectId = new ObjectId(id);
 
     const result = await claimsCollection.updateOne(
-      { _id: new ObjectId(id) },
+      { _id: objectId },
       {
         $set: {
           ...claimData,
@@ -146,16 +162,16 @@ app.put("/api/claims/:id", async (req, res) => {
     }
 
     const updated = await claimsCollection.findOne({
-      _id: new ObjectId(id)
+      _id: objectId
     });
 
     res.json({
       success: true,
       message: "Claim updated successfully.",
-      claim: serializeClaim(updated)
+      claim: serializeDocument(updated)
     });
   } catch (error) {
-    console.error("Update claim error:", error);
+    console.error("Update claim error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to update claim."
@@ -163,10 +179,12 @@ app.put("/api/claims/:id", async (req, res) => {
   }
 });
 
-// Delete a claim
+// Delete claim
 app.delete("/api/claims/:id", async (req, res) => {
+  if (!databaseReady(res)) return;
+
   try {
-    const id = cleanId(req.params.id);
+    const id = String(req.params.id || "").trim();
 
     if (!ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -191,7 +209,7 @@ app.delete("/api/claims/:id", async (req, res) => {
       message: "Claim deleted successfully."
     });
   } catch (error) {
-    console.error("Delete claim error:", error);
+    console.error("Delete claim error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to delete claim."
@@ -199,8 +217,10 @@ app.delete("/api/claims/:id", async (req, res) => {
   }
 });
 
-// Load saved dropdown options
+// Load dropdown settings
 app.get("/api/dropdowns", async (req, res) => {
+  if (!databaseReady(res)) return;
+
   try {
     const document = await dropdownsCollection.findOne({
       key: "main"
@@ -211,7 +231,7 @@ app.get("/api/dropdowns", async (req, res) => {
       dropdowns: document ? document.options : null
     });
   } catch (error) {
-    console.error("Load dropdowns error:", error);
+    console.error("Load dropdowns error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to load dropdown options."
@@ -219,8 +239,10 @@ app.get("/api/dropdowns", async (req, res) => {
   }
 });
 
-// Save/update dropdown options
+// Save dropdown settings
 app.put("/api/dropdowns", async (req, res) => {
+  if (!databaseReady(res)) return;
+
   try {
     const options = req.body;
 
@@ -247,7 +269,7 @@ app.put("/api/dropdowns", async (req, res) => {
       message: "Dropdown options saved successfully."
     });
   } catch (error) {
-    console.error("Save dropdowns error:", error);
+    console.error("Save dropdowns error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to save dropdown options."
@@ -255,9 +277,33 @@ app.put("/api/dropdowns", async (req, res) => {
   }
 });
 
+// Serve the frontend files
+app.use(express.static(FRONTEND_DIR));
+
+app.get("/", (req, res) => {
+  const indexPath = path.join(FRONTEND_DIR, "index.html");
+
+  if (!fs.existsSync(indexPath)) {
+    return res.status(404).send("index.html was not found.");
+  }
+
+  res.sendFile(indexPath);
+});
+
+// JSON response for unknown API endpoints
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "API endpoint not found."
+  });
+});
+
+// Start server
 async function startServer() {
   if (!MONGODB_URI) {
-    console.error("MONGODB_URI is missing. Check server/.env");
+    console.error(
+      "MONGODB_URI is missing. Set it in Render Environment Variables or server/.env."
+    );
     process.exit(1);
   }
 
@@ -267,16 +313,19 @@ async function startServer() {
     await client.connect();
 
     const db = client.db(DB_NAME);
+
     claimsCollection = db.collection("claims");
     dropdownsCollection = db.collection("dropdowns");
 
     console.log("MongoDB connected successfully!");
 
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Expense Claim server running at http://localhost:${PORT}`);
+      console.log(`Expense Claim server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("MongoDB connection failed:", error);
+    console.error("MongoDB connection failed:", error.message);
+
+    await client.close().catch(() => {});
     process.exit(1);
   }
 }
